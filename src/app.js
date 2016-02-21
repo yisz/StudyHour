@@ -7,6 +7,7 @@ var countdownStarted = false;
 var counter;
 var f;
 var demoFlag = true;
+var HOUR = 3600; // seconds
 
 var main = new UI.Card({
   title: 'Study Hour',
@@ -55,31 +56,31 @@ menu.on('select', function(e) {
     main.body('Press UP to add one more hour.\nPress DOWN to interrupt studying and start wasting your life.');
     switch(e.itemIndex) {
       case 0:
-        timeToCountDown = 1800;
+        timeToCountDown = HOUR/2;
         break;
       case 1:
-        timeToCountDown = 3600;
+        timeToCountDown = HOUR;
         break;
       case 2:
-        timeToCountDown = 5400;
+        timeToCountDown = HOUR + HOUR/2;
         break;
       case 3:
-        timeToCountDown = 7200;
+        timeToCountDown = HOUR*2;
         break;
       case 4:
-        timeToCountDown = 10800;
+        timeToCountDown = HOUR*3;
         break;
       case 5:
-        timeToCountDown = 14400;
+        timeToCountDown = HOUR*4;
         break;
       case 6:
-        timeToCountDown = 18000;
+        timeToCountDown = HOUR*5;
         break;
       case 7:
         timeToCountDown = 60;
         break;
       default:
-        timeToCountDown = 1800;
+        timeToCountDown = HOUR;
     }
     countdownDisplay();
     f = setInterval(function(){
@@ -140,10 +141,11 @@ time.on('click', 'down', function(e){
 
 function countdownDisplay(){
   counter = countdown(timeToCountDown);
-  time.subtitle('Time Left:');
-  time.body(counter.hours + ':'+ 
-            counter.minutes + ':'+
-            counter.seconds + '\n\n         KEEP GOING!');
+  time.subtitle('Time Left:\n     ' + 
+                counter.hours + ':'+ 
+                counter.minutes + ':'+
+                counter.seconds + '\n\nKEEP GOING!');
+  time.body('  ');
   timeToCountDown -= 1;
 }
 
