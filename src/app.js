@@ -6,6 +6,7 @@ var timeToCountDown; // seconds
 var countdownStarted = false;
 var counter;
 var f;
+var demoFlag = true;
 
 var main = new UI.Card({
   title: 'Study Hour',
@@ -41,32 +42,38 @@ var menu = new UI.Menu({
     }]
   });
 
+var leaving = new UI.Card({
+  title: 'Study Hour',
+  icon: 'images/cc_bw.png',
+  body: 'Ugh, you left the Library early. Try to study harder next time.'
+});
+
 menu.on('select', function(e) {
   if (!countdownStarted){
     countdownStarted = true;
     main.subtitle('Studying...');
-    main.body('Press UP to add one more hour. Press DOWN to interrupt studying and start wasting your life.');
+    main.body('Press UP to add one more hour.\nPress DOWN to interrupt studying and start wasting your life.');
     switch(e.itemIndex) {
       case 0:
         timeToCountDown = 1800;
         break;
       case 1:
-        timeToCountDown *= 1;
+        timeToCountDown = 3600;
         break;
       case 2:
-        timeToCountDown += 1800;
+        timeToCountDown = 5400;
         break;
       case 3:
-        timeToCountDown *= 2;
+        timeToCountDown = 7200;
         break;
       case 4:
-        timeToCountDown *= 3;
+        timeToCountDown = 10800;
         break;
       case 5:
-        timeToCountDown *= 4;
+        timeToCountDown = 14400;
         break;
       case 6:
-        timeToCountDown *= 5;
+        timeToCountDown = 18000;
         break;
       case 7:
         timeToCountDown = 60;
@@ -77,27 +84,29 @@ menu.on('select', function(e) {
     countdownDisplay();
     f = setInterval(function(){
       countdownDisplay();
+      
+      // Goal failed
+      if (!inZone() && timeToCountDown > 0){
+        time.hide();
+        Vibe.vibrate('long');
+        leaving.show();
+        init();
+      }
+      
+      // Goal reached
       if (timeToCountDown < -1){
         clearInterval(f);
         countdownStarted = false;
         time.subtitle('Congrats!');
         time.body('You Made It!');
         Vibe.vibrate('long');
-        setTimeout(init(), 3000);
+        init();
       }
     }, 1000);
   }
   menu.hide();
   time.show(); 
 });
-
-// time.on('click', 'back', function(e){
-//   if (countdownStarted) {
-//     main.show();
-//   } else {
-//     menu.show();
-//   }
-// });
 
 main.on('click', 'select', function(e) {
   if (countdownStarted){
@@ -116,23 +125,33 @@ main.on('click', 'down', function(e){
   init();
 });
 
-// main.on('click', 'back', function(e){
-  
-// });
+time.on('click', 'up', function(e){
+  demoFlag = false;
+});
+
+time.on('click', 'down', function(e){
+  clearInterval(f);
+  countdownStarted = false;
+  time.subtitle('Congrats!');
+  time.body('You Made It!');
+  Vibe.vibrate('long');
+  init();
+});
 
 function countdownDisplay(){
-    counter = countdown(timeToCountDown);
-    time.body(counter.hours + ':'+ 
-              counter.minutes + ':'+
-              counter.seconds + '\n\n         KEEP GOING!');
-    timeToCountDown -= 1;
+  counter = countdown(timeToCountDown);
+  time.subtitle('Time Left:');
+  time.body(counter.hours + ':'+ 
+            counter.minutes + ':'+
+            counter.seconds + '\n\n         KEEP GOING!');
+  timeToCountDown -= 1;
 }
 
 function init(){
-  main.subtitle('You are at the...');
-  main.body('Press SELECT to start studying hour');
-  main.show();
+  main.subtitle('You are at the Library.');
+  main.body('Press SELECT to start your study hour.');
   countdownStarted = false;
+  demoFlag = true;
   clearInterval(f);
 }
 
@@ -151,4 +170,13 @@ function countdown(timeToCountDown){
   };
 }
 
+function inZone(){
+  if (!demoFlag){
+    demoFlag = true;
+    return false;
+  }
+  return true;
+}
+
 init();
+main.show();
