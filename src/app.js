@@ -1,3 +1,4 @@
+var turf = require('turf');
 var UI = require('ui');
 var Vibe = require('ui/vibe');
 // var Vector2 = require('vector2');
@@ -5,9 +6,15 @@ var Vibe = require('ui/vibe');
 var timeToCountDown; // seconds
 var countdownStarted = false;
 var counter;
-var f;
+var f, t;
 var demoFlag = true;
 var HOUR = 3600; // seconds
+
+var gpslatitude;
+var gpslongitude;
+var fields;
+var placeName = "the Library";
+var prevPlaceName = placeName;
 
 var main = new UI.Card({
   title: 'Study Hour',
@@ -46,13 +53,13 @@ var menu = new UI.Menu({
 var leaving = new UI.Card({
   title: 'Study Hour',
   icon: 'images/cc_bw.png',
-  body: 'Ugh, you left the Library early. Try to study harder next time.'
+  body: 'Ugh, you left the zone early. Try to study harder next time.'
 });
 
 menu.on('select', function(e) {
   if (!countdownStarted){
     countdownStarted = true;
-    main.subtitle('Studying...');
+    main.subtitle('@' + placeName);
     main.body('Press UP to add one more hour.\nPress DOWN to interrupt studying and start wasting your life.');
     switch(e.itemIndex) {
       case 0:
@@ -83,9 +90,11 @@ menu.on('select', function(e) {
         timeToCountDown = HOUR;
     }
     countdownDisplay();
+    
+    // Runs every second until interruption or finish
     f = setInterval(function(){
       countdownDisplay();
-      
+      // time.subtitle(gpslatitude + '\n' + gpslongitude + placeName);
       // Goal failed
       if (!inZone() && timeToCountDown > 0){
         time.hide();
@@ -127,7 +136,13 @@ main.on('click', 'down', function(e){
 });
 
 time.on('click', 'up', function(e){
-  demoFlag = false;
+  //demoFlag = false;
+  
+  // For demo purpose, display the leaving page
+  time.hide();
+  Vibe.vibrate('long');
+  leaving.show();
+  init();
 });
 
 time.on('click', 'down', function(e){
@@ -144,13 +159,21 @@ function countdownDisplay(){
   time.subtitle('Time Left:\n     ' + 
                 counter.hours + ':'+ 
                 counter.minutes + ':'+
-                counter.seconds + '\n\nKEEP GOING!');
-  time.body('  ');
+                counter.seconds + '\n\n');
+  time.body('STAY IN THE ZONE');
   timeToCountDown -= 1;
 }
 
 function init(){
-  main.subtitle('You are at the Library.');
+  t = setInterval(function(){
+    if (inZone()){
+      main.subtitle('You are at ' + placeName + '.');
+      prevPlaceName = placeName;
+      clearInterval(t);
+    } else {
+      main.subtitle('Searching for zones...');
+    }}, 10);
+  
   main.body('Press SELECT to start your study hour.');
   countdownStarted = false;
   demoFlag = true;
@@ -172,12 +195,82 @@ function countdown(timeToCountDown){
   };
 }
 
-function inZone(){
+/*function inZone(){
   if (!demoFlag){
     demoFlag = true;
     return false;
   }
   return true;
+}*/
+
+
+function getFields() {
+	var req = new XMLHttpRequest();
+	var apiurl = "https://hackillinois.climate.com/api/fields?includeBoundary=true";
+	req.open("GET", apiurl, false);
+	req.setRequestHeader("Authorization", "Bearer 5f8a7a29-6c42-4a63-8c3f-94e2c2e5e8e7");
+	req.send();
+  console.log(req.responseText);
+  return JSON.parse(req.responseText);
+}
+
+function roundThree(num) {    
+    return +(Math.round(num + "e+3")  + "e-3");
+}
+
+function checkPoint(latitude,longitude,fields) {
+	var pt1 = {
+	  "type": "Feature",
+	  "properties": {
+	    "marker-color": "#f00"
+	  },
+	  "geometry": {
+	    "type": "Point",
+	    "coordinates": [roundThree(longitude),roundThree(latitude)]
+	  }
+	};
+	var inField = false;
+  var coordinates, poly, maybe;
+	for(var index = 0; index < fields.length; index++) {
+		coordinates = fields[index].boundary;
+		poly = {"type": "Feature","properties": {},"geometry": coordinates};
+		maybe = turf.inside(pt1,poly);
+		//maybe = gju.pointInPolygon({"type":"Point","coordinates":[-88.22654485702515, 40.10989988529661]}, coordinates)
+		console.log(pt1.geometry.coordinates);
+		//console.log(longitude)
+		//console.log(coordinates)
+		if(maybe){
+			inField = true;
+      placeName = fields[index].name;
+		}		
+	}
+	return inField;
+}
+
+var locationOptions = {
+  enableHighAccuracy: true, 
+  maximumAge: 10000, 
+  timeout: 10000
+};
+
+
+function locationSuccess(pos) {
+  console.log('lat= ' + pos.coords.latitude + ' lon= ' + pos.coords.longitude);
+  gpslatitude = pos.coords.latitude;
+  gpslongitude = pos.coords.longitude;
+}
+
+function locationError(err) {
+  console.log('location error (' + err.code + '): ' + err.message);
+}
+
+function inZone(){
+	navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
+  //console.log(gpslatitude);
+	fields = getFields().fields;
+  //console.log(fields[0].name);
+	var inzone = checkPoint(gpslatitude,gpslongitude,fields);
+  return inzone;
 }
 
 init();
